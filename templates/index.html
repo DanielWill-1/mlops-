@@ -3,14 +3,55 @@
 <head>
     <title>E-Commerce MVP</title>
     <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh; /* Ensure body takes full viewport height */
+            margin: 0; /* Remove default margin */
+            font-family: Arial, sans-serif; /* Optional: improve readability */
+        }
         .card {
             border: 1px solid #ddd;
             padding: 15px;
-            margin: 10px;
+            margin: 10px 0; /* Vertical margin only */
             border-radius: 5px;
+            width: 80%; /* Limit card width */
+            max-width: 600px; /* Optional: cap the width */
+            text-align: center; /* Center text inside cards */
         }
         .high-risk { color: red; }
         .discount { color: green; }
+        h1 {
+            text-align: center;
+        }
+        #features {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 400px; /* Limit feature section width */
+        }
+        #features label {
+            margin: 5px 0; /* Vertical spacing for labels */
+            width: 100%;
+            text-align: left; /* Left-align labels for readability */
+        }
+        #features input {
+            width: 100px; /* Fixed width for inputs */
+            margin-left: 10px; /* Space between label text and input */
+        }
+        button {
+            margin: 15px 0; /* Vertical margin */
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        #results {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
@@ -22,38 +63,69 @@
         
         <h3>User Features (Mock Data):</h3>
         <div id="features">
-            <label>Total Purchases: <input type="number" id="total_purchases" value="15"></label><br>
-            <label>Avg Basket Size: <input type="number" id="avg_basket" value="24.5" step="0.1"></label><br>
+            <label>Total Purchases: <input type="number" id="total_purchases" value="15"></label>
+            <label>Avg Basket Size: <input type="number" id="avg_basket" value="24.5" step="0.1"></label>
             <label>Last Purchase Days: <input type="number" id="last_purchase" value="7"></label>
+            <label>Cancellation Rate: <input type="number" id="cancellation_rate" value="0.1" step="0.01"></label>
+            <label>Abandonment Rate: <input type="number" id="abandonment_rate" value="0.2" step="0.01"></label>
         </div>
         
         <button onclick="getPredictions()">Get Recommendations</button>
     </div>
     
-    <div id="results">
-        <!-- Results will appear here -->
-    </div>
+    <div id="results"></div>
 
     <script>
         async function getPredictions() {
-            const userId = document.getElementById('userId').value;
-            const features = {
-                'TotalPurchases': parseFloat(document.getElementById('total_purchases').value),
-                'AvgBasketSize': parseFloat(document.getElementById('avg_basket').value),
-                'LastPurchaseDays': parseFloat(document.getElementById('last_purchase').value)
-            };
-            
-            const response = await fetch('http://localhost:5000/predict', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId, features: features })
-            });
-            
-            const data = await response.json();
-            renderResults(data);
-        }
+            try {
+                const userId = document.getElementById('userId').value;
+                const features = {
+                    'TotalPurchases': parseFloat(document.getElementById('total_purchases').value),
+                    'AvgBasketSize': parseFloat(document.getElementById('avg_basket').value),
+                    'LastPurchaseDays': parseFloat(document.getElementById('last_purchase').value),
+                    'CancellationRate': parseFloat(document.getElementById('cancellation_rate').value),
+                    'AbandonmentRate': parseFloat(document.getElementById('abandonment_rate').value)
+                };
         
+                const response = await fetch('http://localhost:5000/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        user_id: userId, 
+                        features: features 
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                renderResults(data);
+        
+                } catch (error) {
+                    console.error("Error:", error);
+                    document.getElementById('results').innerHTML = `
+                        <div class="card" style="color: red;">
+                            <h3>Error</h3>
+                            <p>${error.message}</p>
+                            <p>Please check the server connection and try again.</p>
+                        </div>
+                    `;
+                }
+        }
         function renderResults(data) {
+            if (!data || !data.recommendations) {
+                document.getElementById('results').innerHTML = `
+                    <div class="card" style="color: red;">
+                        <h3>Error</h3>
+                        <p>No recommendations available</p>
+                        <p>${data?.error || 'Unknown error'}</p>
+                    </div>
+                `;
+                return;
+            }
             let html = `
                 <div class="card">
                     <h2>User: ${data.user_id}</h2>
@@ -69,12 +141,12 @@
             
             data.recommendations.forEach(item => {
                 html += `
-                <div class="card">
-                    <h4>${item.description}</h4>
-                    <p>Product Code: ${item.product_code}</p>
-                    <p>Relevance Score: ${item.base_score.toFixed(2)}</p>
-                    <p class="discount">Discounted Price: $${item.discounted_price}</p>
-                </div>
+                    <div class="card">
+                        <h4>${item.description}</h4>
+                        <p>Product Code: ${item.product_code}</p>
+                        <p>Relevance Score: ${item.base_score.toFixed(2)}</p>
+                        <p class="discount">Discounted Price: $${item.discounted_price}</p>
+                    </div>
                 `;
             });
             

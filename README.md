@@ -1,4 +1,4 @@
-# ml project E commerce optimization using ml strategies 
+# E commerce optimization using ml strategies 
 
 E-Commerce Cart Optimization
 An intelligent system to enhance online shopping experiences by reducing cart abandonment and boosting conversion rates through dynamic discounts, predictive analytics, and personalized product recommendations.
